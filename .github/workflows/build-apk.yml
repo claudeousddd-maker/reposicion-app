@@ -15,7 +15,6 @@ jobs:
         run: |
           mkdir proyecto
           unzip -q *.zip -d proyecto
-          find proyecto -name gradlew -type f -exec chmod +x {} \;
 
       - name: Configurar Java
         uses: actions/setup-java@v4
@@ -23,11 +22,26 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Instalar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Encontrar proyecto Android
+        run: |
+          SETTINGS=$(find proyecto -name settings.gradle -o -name settings.gradle.kts | head -1)
+          if [ -z "$SETTINGS" ]; then
+            echo "No se encontró settings.gradle"
+            find proyecto -maxdepth 4 -type f | head -100
+            exit 1
+          fi
+          echo "Proyecto encontrado en: $(dirname "$SETTINGS")"
+
       - name: Compilar APK
         run: |
-          GRADLEW=$(find proyecto -name gradlew -type f | head -1)
-          cd "$(dirname "$GRADLEW")"
-          ./gradlew assembleDebug
+          SETTINGS=$(find proyecto -name settings.gradle -o -name settings.gradle.kts | head -1)
+          cd "$(dirname "$SETTINGS")"
+          gradle assembleDebug --no-daemon
 
       - name: Guardar APK
         uses: actions/upload-artifact@v4
